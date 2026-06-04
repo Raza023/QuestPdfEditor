@@ -1,0 +1,2465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QuestPdf - Modern PDF Annotator</title>
+  
+  <!-- Fonts: Inter for UI & English, Noto Nastaliq Urdu for Urdu -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Nastaliq+Urdu:wght@400;700&display=swap" rel="stylesheet">
+  
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- PDF.js & jsPDF Libraries -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <style>
+    /* Premium CSS Variables & Theme Configuration */
+    :root {
+      --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #020617 100%);
+      --panel-bg: rgba(30, 41, 59, 0.7);
+      --panel-border: rgba(255, 255, 255, 0.08);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --primary: #6366f1;
+      --primary-hover: #4f46e5;
+      --primary-glow: rgba(99, 102, 241, 0.4);
+      --accent-purple: #a855f7;
+      --accent-pink: #ec4899;
+      --accent-emerald: #10b981;
+      --danger: #ef4444;
+      --danger-hover: #dc2626;
+      --glass-blur: blur(16px);
+      --shadow-lg: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+      --font-ui: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --font-urdu: 'Noto Nastaliq Urdu', 'Inter', serif;
+      --sidebar-width: 260px;
+    }
+
+    .light-theme {
+      --bg-gradient: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 50%, #cbd5e1 100%);
+      --panel-bg: rgba(255, 255, 255, 0.75);
+      --panel-border: rgba(15, 23, 42, 0.08);
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --primary: #4f46e5;
+      --primary-hover: #4338ca;
+      --primary-glow: rgba(79, 70, 229, 0.25);
+      --glass-blur: blur(20px);
+      --shadow-lg: 0 10px 25px -5px rgba(15, 23, 42, 0.1), 0 8px 10px -6px rgba(15, 23, 42, 0.1);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      transition: background-color 0.3s, border-color 0.3s, color 0.3s;
+    }
+
+    body {
+      font-family: var(--font-ui);
+      background: var(--bg-gradient);
+      color: var(--text-main);
+      min-height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Background Animation */
+    .bg-animation {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+      overflow: hidden;
+      pointer-events: none;
+    }
+    .bg-glow-1 {
+      position: absolute;
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, rgba(99, 102, 241, 0) 70%);
+      top: -200px;
+      left: -200px;
+      animation: float-slow 20s infinite alternate;
+    }
+    .bg-glow-2 {
+      position: absolute;
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(168, 85, 247, 0.12) 0%, rgba(168, 85, 247, 0) 70%);
+      bottom: -200px;
+      right: -200px;
+      animation: float-slow 25s infinite alternate-reverse;
+    }
+
+    @keyframes float-slow {
+      0% { transform: translate(0, 0) scale(1); }
+      100% { transform: translate(100px, 50px) scale(1.1); }
+    }
+
+    /* Scrollbar Styling */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 10px;
+    }
+    .light-theme ::-webkit-scrollbar-thumb {
+      background: rgba(0, 0, 0, 0.15);
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+
+    /* Landing / File Upload Overlay */
+    #landing-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      background: var(--bg-gradient);
+      transition: opacity 0.5s ease, transform 0.5s ease;
+    }
+
+    .landing-card {
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      border-radius: 24px;
+      padding: 3.5rem 3rem;
+      max-width: 550px;
+      width: 100%;
+      text-align: center;
+      backdrop-filter: var(--glass-blur);
+      box-shadow: var(--shadow-lg);
+      transform: translateY(0);
+      animation: card-appear 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes card-appear {
+      0% { opacity: 0; transform: translateY(30px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+
+    .logo-container {
+      margin-bottom: 2rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 80px;
+      height: 80px;
+      border-radius: 20px;
+      background: linear-gradient(135deg, var(--primary), var(--accent-purple));
+      box-shadow: 0 0 20px var(--primary-glow);
+    }
+    .logo-container i {
+      font-size: 2.2rem;
+      color: #fff;
+    }
+
+    .landing-title {
+      font-size: 2.25rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      letter-spacing: -0.025em;
+    }
+    .landing-subtitle {
+      color: var(--text-muted);
+      font-size: 1rem;
+      margin-bottom: 2.5rem;
+    }
+
+    .upload-zone {
+      border: 2px dashed rgba(255, 255, 255, 0.2);
+      background: rgba(255, 255, 255, 0.02);
+      border-radius: 16px;
+      padding: 3rem 2rem;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .light-theme .upload-zone {
+      border-color: rgba(0, 0, 0, 0.15);
+      background: rgba(0, 0, 0, 0.01);
+    }
+
+    .upload-zone:hover, .upload-zone.dragover {
+      border-color: var(--primary);
+      background: rgba(99, 102, 241, 0.05);
+      box-shadow: 0 0 25px rgba(99, 102, 241, 0.15);
+      transform: scale(1.02);
+    }
+
+    .upload-icon {
+      font-size: 3rem;
+      color: var(--primary);
+      margin-bottom: 1.25rem;
+      animation: float 3s ease-in-out infinite;
+    }
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+
+    .upload-text {
+      font-weight: 500;
+      margin-bottom: 0.5rem;
+    }
+    .upload-hint {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    /* Error Toast */
+    .toast-container {
+      position: fixed;
+      bottom: 2rem;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      z-index: 1000;
+      opacity: 0;
+      transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      pointer-events: none;
+    }
+    .toast-container.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+    .toast {
+      background: rgba(239, 68, 68, 0.9);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #fff;
+      padding: 1rem 2rem;
+      border-radius: 12px;
+      font-weight: 500;
+      box-shadow: 0 10px 30px rgba(239, 68, 68, 0.3);
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    /* Main Application Layout */
+    #app-container {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      opacity: 0;
+      pointer-events: none;
+      transform: scale(0.98);
+      transition: opacity 0.5s ease, transform 0.5s ease;
+    }
+    #app-container.active {
+      opacity: 1;
+      pointer-events: auto;
+      transform: scale(1);
+    }
+
+    /* Header Styling */
+    header {
+      background: var(--panel-bg);
+      backdrop-filter: var(--glass-blur);
+      border-bottom: 1px solid var(--panel-border);
+      padding: 0.75rem 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 10;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-weight: 700;
+      font-size: 1.25rem;
+    }
+    .brand-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--primary), var(--accent-purple));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.95rem;
+      color: #fff;
+    }
+
+    .file-info {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: rgba(255, 255, 255, 0.05);
+      padding: 0.4rem 0.8rem;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      max-width: 300px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      border: 1px solid var(--panel-border);
+    }
+    .light-theme .file-info {
+      background: rgba(0, 0, 0, 0.04);
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    /* Buttons */
+    .btn {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--panel-border);
+      color: var(--text-main);
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      font-weight: 500;
+      font-size: 0.9rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: all 0.25s ease;
+    }
+    .light-theme .btn {
+      background: rgba(0, 0, 0, 0.05);
+    }
+    .btn:hover {
+      background: rgba(255, 255, 255, 0.12);
+      transform: translateY(-1px);
+    }
+    .light-theme .btn:hover {
+      background: rgba(0, 0, 0, 0.08);
+    }
+    .btn-primary {
+      background: var(--primary);
+      border-color: transparent;
+      color: #fff;
+    }
+    .btn-primary:hover {
+      background: var(--primary-hover);
+      box-shadow: 0 0 15px var(--primary-glow);
+    }
+    .btn-icon {
+      width: 38px;
+      height: 38px;
+      padding: 0;
+      justify-content: center;
+      border-radius: 50%;
+    }
+
+    /* Workspace Panel Layout */
+    .workspace {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Sidebar (Thumbnails) */
+    .sidebar {
+      width: var(--sidebar-width);
+      background: var(--panel-bg);
+      backdrop-filter: var(--glass-blur);
+      border-right: 1px solid var(--panel-border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      z-index: 5;
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .sidebar.collapsed {
+      width: 0;
+      border-right-color: transparent;
+    }
+
+    .sidebar-header {
+      padding: 1rem;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--panel-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .thumbnails-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .thumbnail-card {
+      background: rgba(0, 0, 0, 0.2);
+      border: 2px solid transparent;
+      border-radius: 12px;
+      padding: 0.5rem;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+      transition: all 0.25s ease;
+    }
+    .light-theme .thumbnail-card {
+      background: rgba(255, 255, 255, 0.5);
+    }
+    .thumbnail-card:hover {
+      background: rgba(0, 0, 0, 0.3);
+      transform: translateY(-2px);
+    }
+    .light-theme .thumbnail-card:hover {
+      background: rgba(0, 0, 0, 0.05);
+    }
+    .thumbnail-card.active {
+      border-color: var(--primary);
+      background: rgba(99, 102, 241, 0.1);
+      box-shadow: 0 0 15px rgba(99, 102, 241, 0.15);
+    }
+    .thumbnail-wrapper {
+      width: 100%;
+      height: 150px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      position: relative;
+    }
+    .thumbnail-wrapper canvas {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+    .thumbnail-number {
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--text-muted);
+    }
+    .thumbnail-card.active .thumbnail-number {
+      color: var(--primary);
+    }
+
+    /* Viewer Container */
+    .viewer-container {
+      flex: 1;
+      overflow: auto;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 2.5rem;
+      background: rgba(0, 0, 0, 0.15);
+      position: relative;
+    }
+    .light-theme .viewer-container {
+      background: rgba(0, 0, 0, 0.02);
+    }
+
+    /* Floating Toolbar (Left) */
+    .floating-toolbar {
+      position: absolute;
+      left: 1.5rem;
+      top: 50%;
+      transform: translateY(-50%);
+      background: var(--panel-bg);
+      backdrop-filter: var(--glass-blur);
+      border: 1px solid var(--panel-border);
+      border-radius: 16px;
+      padding: 0.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      z-index: 8;
+      box-shadow: var(--shadow-lg);
+      animation: slide-in-left 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @keyframes slide-in-left {
+      0% { opacity: 0; transform: translateY(-50%) translateX(-20px); }
+      100% { opacity: 1; transform: translateY(-50%) translateX(0); }
+    }
+
+    .tool-btn {
+      width: 44px;
+      height: 44px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      border-radius: 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      position: relative;
+      transition: all 0.2s ease;
+    }
+    .tool-btn:hover {
+      color: var(--text-main);
+      background: rgba(255, 255, 255, 0.05);
+    }
+    .light-theme .tool-btn:hover {
+      background: rgba(0, 0, 0, 0.04);
+    }
+    .tool-btn.active {
+      color: #fff;
+      background: var(--primary);
+      box-shadow: 0 0 12px var(--primary-glow);
+    }
+    .tool-btn[data-tooltip]::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      left: 110%;
+      top: 50%;
+      transform: translateY(-50%) translateX(8px);
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid var(--panel-border);
+      color: #f8fafc;
+      padding: 0.4rem 0.8rem;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      white-space: nowrap;
+      pointer-events: none;
+      opacity: 0;
+      transition: all 0.15s ease;
+    }
+    .tool-btn[data-tooltip]:hover::after {
+      opacity: 1;
+      transform: translateY(-50%) translateX(0);
+    }
+
+    .tool-divider {
+      height: 1px;
+      background: var(--panel-border);
+      margin: 0.3rem 0;
+    }
+
+    /* Floating Canvas / Page Area */
+    .page-render-wrapper {
+      position: relative;
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 20px 45px rgba(0, 0, 0, 0.25);
+      display: inline-block;
+      user-select: none;
+    }
+    .light-theme .page-render-wrapper {
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.08);
+    }
+
+    #pdf-canvas {
+      display: block;
+      border-radius: 8px;
+    }
+
+    #annotation-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      border-radius: 8px;
+      z-index: 2;
+    }
+
+    #text-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      border-radius: 8px;
+      z-index: 3;
+      pointer-events: none;
+    }
+
+    /* Dynamic Text Annotations Wrapper */
+    .text-annotation-wrapper {
+      position: absolute;
+      pointer-events: auto;
+      cursor: move;
+      border: 1px dashed transparent;
+      padding: 4px;
+      min-width: 80px;
+      display: inline-block;
+      z-index: 10;
+    }
+
+    .text-annotation-wrapper.active-annotation {
+      border-color: var(--primary);
+      background: rgba(99, 102, 241, 0.04);
+      box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.2);
+    }
+
+    .text-annotation-editable {
+      outline: none;
+      white-space: pre-wrap;
+      word-break: break-word;
+      line-height: 1.4;
+      min-height: 1.2em;
+      cursor: text;
+    }
+
+    .text-annotation-wrapper[data-urdu="true"] .text-annotation-editable {
+      font-family: var(--font-urdu);
+      direction: rtl;
+      text-align: right;
+      line-height: 2.2; /* Beautiful spacing for Nastaleeq */
+    }
+
+    .text-delete-btn {
+      position: absolute;
+      top: -10px;
+      right: -10px;
+      width: 20px;
+      height: 20px;
+      background: var(--danger);
+      color: #fff;
+      border: none;
+      border-radius: 50%;
+      cursor: pointer;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.65rem;
+      box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
+      z-index: 15;
+    }
+    .text-annotation-wrapper.active-annotation .text-delete-btn {
+      display: flex;
+    }
+
+    /* Style inspector (Right Panel) */
+    .inspector-panel {
+      width: 280px;
+      background: var(--panel-bg);
+      backdrop-filter: var(--glass-blur);
+      border-left: 1px solid var(--panel-border);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      z-index: 5;
+      padding: 1.5rem;
+      gap: 1.5rem;
+    }
+
+    .panel-section-title {
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-bottom: 0.75rem;
+    }
+
+    /* Color Grid */
+    .color-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 0.5rem;
+    }
+    .color-bubble {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .color-bubble.active {
+      transform: scale(1.15);
+      border-color: var(--text-main);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+    }
+    .color-bubble i {
+      font-size: 0.7rem;
+      color: #fff;
+      opacity: 0;
+    }
+    .color-bubble.active i {
+      opacity: 1;
+    }
+
+    /* Custom range styling */
+    .range-input {
+      width: 100%;
+      -webkit-appearance: none;
+      background: rgba(255, 255, 255, 0.1);
+      height: 6px;
+      border-radius: 3px;
+      outline: none;
+    }
+    .light-theme .range-input {
+      background: rgba(0, 0, 0, 0.1);
+    }
+    .range-input::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--primary);
+      cursor: pointer;
+      box-shadow: 0 0 8px var(--primary-glow);
+    }
+
+    .range-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 0.4rem;
+    }
+
+    /* Text Style Selectors */
+    .toggle-group {
+      display: flex;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--panel-border);
+      border-radius: 8px;
+      padding: 0.2rem;
+    }
+    .light-theme .toggle-group {
+      background: rgba(0, 0, 0, 0.03);
+    }
+    .toggle-group button {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      padding: 0.4rem 0;
+      font-size: 0.85rem;
+      font-weight: 500;
+      cursor: pointer;
+      border-radius: 6px;
+      transition: all 0.2s;
+    }
+    .toggle-group button.active {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--text-main);
+    }
+    .light-theme .toggle-group button.active {
+      background: rgba(0, 0, 0, 0.05);
+    }
+
+    .active-lang-badge {
+      display: inline-block;
+      font-size: 0.7rem;
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      font-weight: 600;
+      margin-left: auto;
+    }
+    .active-lang-badge.en {
+      background: rgba(99, 102, 241, 0.15);
+      color: #818cf8;
+    }
+    .active-lang-badge.ur {
+      background: rgba(236, 72, 153, 0.15);
+      color: #f472b6;
+    }
+
+    /* Bottom Controller */
+    .bottom-controller {
+      position: absolute;
+      bottom: 2rem;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--panel-bg);
+      backdrop-filter: var(--glass-blur);
+      border: 1px solid var(--panel-border);
+      padding: 0.6rem 1.2rem;
+      border-radius: 99px;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      box-shadow: var(--shadow-lg);
+      z-index: 8;
+      animation: slide-up 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @keyframes slide-up {
+      0% { opacity: 0; transform: translate(-50%, 20px); }
+      100% { opacity: 1; transform: translate(-50%, 0); }
+    }
+
+    .controller-divider {
+      width: 1px;
+      height: 20px;
+      background: var(--panel-border);
+    }
+
+    .page-nav {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .page-input {
+      width: 40px;
+      text-align: center;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--panel-border);
+      border-radius: 6px;
+      color: var(--text-main);
+      font-weight: 600;
+      font-size: 0.9rem;
+      padding: 0.25rem;
+      outline: none;
+    }
+    .light-theme .page-input {
+      background: rgba(0, 0, 0, 0.03);
+    }
+
+    /* Loading Overlay */
+    #loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(15, 23, 42, 0.8);
+      backdrop-filter: blur(8px);
+      z-index: 1000;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1.5rem;
+      color: #fff;
+    }
+    .loader-ring {
+      width: 50px;
+      height: 50px;
+      border: 4px solid rgba(255, 255, 255, 0.1);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 1s infinite linear;
+    }
+    @keyframes spin {
+      100% { transform: rotate(360deg); }
+    }
+    .loader-text {
+      font-weight: 500;
+      font-size: 1.1rem;
+      letter-spacing: 0.02em;
+    }
+
+    /* Responsive design adjustments */
+    @media (max-width: 900px) {
+      .workspace {
+        flex-direction: column;
+      }
+      .sidebar {
+        width: 100%;
+        height: 180px;
+        border-right: none;
+        border-bottom: 1px solid var(--panel-border);
+      }
+      .sidebar.collapsed {
+        height: 0;
+        border-bottom-color: transparent;
+      }
+      .thumbnails-container {
+        flex-direction: row;
+        overflow-x: auto;
+        overflow-y: hidden;
+      }
+      .thumbnail-card {
+        min-width: 100px;
+        height: 130px;
+      }
+      .inspector-panel {
+        width: 100%;
+        border-left: none;
+        border-top: 1px solid var(--panel-border);
+        height: 250px;
+      }
+      .floating-toolbar {
+        left: 50%;
+        top: 1.5rem;
+        transform: translateX(-50%) translateY(0);
+        flex-direction: row;
+      }
+      @keyframes slide-in-left {
+        0% { opacity: 0; transform: translateX(-50%) translateY(-20px); }
+        100% { opacity: 1; transform: translateX(-50%) translateY(0); }
+      }
+      .tool-btn[data-tooltip]::after {
+        left: 50%;
+        top: 110%;
+        transform: translateX(-50%) translateY(8px);
+      }
+      .tool-btn[data-tooltip]:hover::after {
+        transform: translateX(-50%) translateY(0);
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Dynamic Animated Ambient Glows -->
+  <div class="bg-animation">
+    <div class="bg-glow-1"></div>
+    <div class="bg-glow-2"></div>
+  </div>
+
+  <!-- Landing Screen / Upload PDF Area -->
+  <div id="landing-screen">
+    <div class="landing-card">
+      <div class="logo-container">
+        <i class="fa-solid fa-file-pdf"></i>
+      </div>
+      <h1 class="landing-title">QuestPdf</h1>
+      <p class="landing-subtitle">Sleek, secure client-side PDF viewer and annotator</p>
+      
+      <div class="upload-zone" id="drop-zone">
+        <i class="fa-solid fa-cloud-arrow-up upload-icon"></i>
+        <p class="upload-text">Drag & Drop your PDF here</p>
+        <p class="upload-hint">or click to browse files (strictly .pdf)</p>
+        <input type="file" id="file-picker" accept="application/pdf" style="display: none;">
+      </div>
+    </div>
+  </div>
+
+  <!-- Main App Screen -->
+  <div id="app-container">
+    
+    <!-- Top Header Bar -->
+    <header>
+      <div class="brand">
+        <div class="brand-icon">
+          <i class="fa-solid fa-feather-pointed"></i>
+        </div>
+        <span>QuestPdf Annotator</span>
+        <div class="file-info" id="file-name-display">
+          document.pdf
+        </div>
+      </div>
+      
+      <div class="header-actions">
+        <button class="btn" id="theme-toggle" data-tooltip="Toggle Light/Dark Theme">
+          <i class="fa-solid fa-moon"></i>
+        </button>
+        <button class="btn" id="toggle-sidebar-btn" data-tooltip="Toggle Thumbnails">
+          <i class="fa-solid fa-images"></i>
+        </button>
+        <button class="btn btn-primary" id="download-pdf-btn">
+          <i class="fa-solid fa-download"></i>
+          <span>Save PDF</span>
+        </button>
+        <button class="btn" id="new-document-btn" style="background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.2); color: var(--danger);">
+          <i class="fa-solid fa-arrow-left"></i>
+          <span>New</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- App Body containing sidebar, canvas, inspector -->
+    <div class="workspace">
+      
+      <!-- Left Sidebar for Page Previews -->
+      <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+          <span>Thumbnails</span>
+          <i class="fa-solid fa-grip"></i>
+        </div>
+        <div class="thumbnails-container" id="thumbnails-container">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+      <!-- Center Viewer containing the rendered PDF page and drawing layers -->
+      <div class="viewer-container" id="viewer-container">
+        
+        <!-- Floating toolbar (Left margin) -->
+        <div class="floating-toolbar">
+          <button class="tool-btn active" data-tool="pan" data-tooltip="Pan & Select">
+            <i class="fa-solid fa-hand"></i>
+          </button>
+          
+          <div class="tool-divider"></div>
+          
+          <button class="tool-btn" data-tool="draw" data-tooltip="Pen Brush">
+            <i class="fa-solid fa-pen-fancy"></i>
+          </button>
+          <button class="tool-btn" data-tool="highlight" data-tooltip="Highlighter">
+            <i class="fa-solid fa-highlighter"></i>
+          </button>
+          <button class="tool-btn" data-tool="text" data-tooltip="Add Text">
+            <i class="fa-solid fa-font"></i>
+          </button>
+          
+          <div class="tool-divider"></div>
+
+          <button class="tool-btn" data-tool="rect" data-tooltip="Draw Rectangle">
+            <i class="fa-regular fa-square"></i>
+          </button>
+          <button class="tool-btn" data-tool="circle" data-tooltip="Draw Circle">
+            <i class="fa-regular fa-circle"></i>
+          </button>
+          <button class="tool-btn" data-tool="line" data-tooltip="Draw Line">
+            <i class="fa-solid fa-slash"></i>
+          </button>
+
+          <div class="tool-divider"></div>
+
+          <button class="tool-btn" id="undo-btn" data-tooltip="Undo (Ctrl+Z)">
+            <i class="fa-solid fa-rotate-left"></i>
+          </button>
+          <button class="tool-btn" id="redo-btn" data-tooltip="Redo (Ctrl+Y)">
+            <i class="fa-solid fa-rotate-right"></i>
+          </button>
+          <button class="tool-btn" id="clear-page-btn" data-tooltip="Clear Current Page" style="color: var(--danger);">
+            <i class="fa-solid fa-trash-can"></i>
+          </button>
+        </div>
+
+        <!-- Render Wrapper (Holds the layers together) -->
+        <div class="page-render-wrapper" id="page-wrapper">
+          <canvas id="pdf-canvas"></canvas>
+          <canvas id="annotation-canvas"></canvas>
+          <div id="text-layer"></div>
+        </div>
+
+        <!-- Floating Zoom & Navigation Bar (Bottom) -->
+        <div class="bottom-controller">
+          <div class="page-nav">
+            <button class="btn btn-icon" id="prev-page-btn">
+              <i class="fa-solid fa-chevron-left"></i>
+            </button>
+            <span style="font-size: 0.9rem; font-weight: 500;">
+              Page <input type="number" id="page-num-input" class="page-input" value="1" min="1" max="1"> of <span id="total-pages-display">1</span>
+            </span>
+            <button class="btn btn-icon" id="next-page-btn">
+              <i class="fa-solid fa-chevron-right"></i>
+            </button>
+          </div>
+
+          <div class="controller-divider"></div>
+
+          <div class="page-nav">
+            <button class="btn btn-icon" id="zoom-out-btn">
+              <i class="fa-solid fa-minus"></i>
+            </button>
+            <span style="font-size: 0.9rem; font-weight: 600; min-width: 45px; text-align: center;" id="zoom-percent-display">100%</span>
+            <button class="btn btn-icon" id="zoom-in-btn">
+              <i class="fa-solid fa-plus"></i>
+            </button>
+            <button class="btn btn-icon" id="zoom-fit-btn" data-tooltip="Fit Width">
+              <i class="fa-solid fa-expand"></i>
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Right Panel for Styles/Properties Inspector -->
+      <div class="inspector-panel" id="inspector">
+        <div>
+          <div class="panel-section-title">Brush / Annotation Color</div>
+          <div class="color-grid" id="color-palette">
+            <!-- Neon Palette -->
+            <div class="color-bubble active" style="background: #ef4444;" data-color="#ef4444"><i class="fa-solid fa-check"></i></div>
+            <div class="color-bubble" style="background: #3b82f6;" data-color="#3b82f6"><i class="fa-solid fa-check"></i></div>
+            <div class="color-bubble" style="background: #10b981;" data-color="#10b981"><i class="fa-solid fa-check"></i></div>
+            <div class="color-bubble" style="background: #eab308;" data-color="#eab308"><i class="fa-solid fa-check"></i></div>
+            <div class="color-bubble" style="background: #a855f7;" data-color="#a855f7"><i class="fa-solid fa-check"></i></div>
+            <!-- Standard Palette -->
+            <div class="color-bubble" style="background: #f43f5e;" data-color="#f43f5e"><i class="fa-solid fa-check"></i></div>
+            <div class="color-bubble" style="background: #06b6d4;" data-color="#06b6d4"><i class="fa-solid fa-check"></i></div>
+            <div class="color-bubble" style="background: #f97316;" data-color="#f97316"><i class="fa-solid fa-check"></i></div>
+            <div class="color-bubble" style="background: #1e293b;" data-color="#1e293b"><i class="fa-solid fa-check"></i></div>
+            <div class="color-bubble" style="background: #ffffff; border: 1px solid rgba(0,0,0,0.15);" data-color="#ffffff"><i class="fa-solid fa-check" style="color: #000"></i></div>
+          </div>
+        </div>
+
+        <div>
+          <div class="panel-section-title">Brush / Stroke Thickness</div>
+          <input type="range" min="1" max="24" value="4" class="range-input" id="stroke-thickness-slider">
+          <div class="range-labels">
+            <span>1px</span>
+            <span id="stroke-thickness-display">4px</span>
+            <span>24px</span>
+          </div>
+        </div>
+
+        <div id="text-style-options" style="display: none; flex-direction: column; gap: 1.2rem;">
+          <div class="tool-divider" style="margin: 0;"></div>
+          
+          <div>
+            <div class="panel-section-title" style="display: flex; align-items: center;">
+              Text Language & Layout
+              <span class="active-lang-badge en" id="lang-indicator">English</span>
+            </div>
+            <div class="toggle-group" id="lang-toggle-group">
+              <button class="active" id="btn-lang-en">English</button>
+              <button id="btn-lang-ur">Urdu (Nastaliq)</button>
+            </div>
+          </div>
+
+          <div>
+            <div class="panel-section-title">Font Size</div>
+            <input type="range" min="12" max="64" value="20" class="range-input" id="font-size-slider">
+            <div class="range-labels">
+              <span>12px</span>
+              <span id="font-size-display">20px</span>
+              <span>64px</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top: auto;">
+          <div class="panel-section-title">Keyboard Shortcuts</div>
+          <div style="font-size: 0.75rem; color: var(--text-muted); display: flex; flex-direction: column; gap: 0.4rem;">
+            <div><strong>Draw / Highlight:</strong> Left Click + Drag</div>
+            <div><strong>Add Text:</strong> Click canvas after selecting Text Tool</div>
+            <div><strong>Edit Text:</strong> Double-click text box</div>
+            <div><strong>Move Text:</strong> Drag text border</div>
+            <div><strong>Delete Text:</strong> Click pink X on active text</div>
+            <div><strong>Undo/Redo:</strong> Ctrl+Z / Ctrl+Y</div>
+            <div><strong>Save PDF:</strong> Ctrl+S</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Loading Ring Screen -->
+  <div id="loading-overlay">
+    <div class="loader-ring"></div>
+    <div class="loader-text" id="loader-status-text">Loading PDF...</div>
+  </div>
+
+  <!-- Alert/Toast Notification (Error alerts) -->
+  <div class="toast-container" id="toast-container">
+    <div class="toast">
+      <i class="fa-solid fa-circle-exclamation"></i>
+      <span id="toast-message">Error message details here</span>
+    </div>
+  </div>
+
+  <!-- Main JavaScript Logic -->
+  <script>
+    // Set up PDF.js Global Worker
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+    // Application State
+    const state = {
+      pdfData: null,
+      pdfDoc: null,
+      totalPages: 0,
+      currentPage: 1,
+      zoom: 1.0,
+      currentTool: 'pan', // pan, draw, highlight, text, rect, circle, line
+      currentColor: '#ef4444',
+      strokeThickness: 4,
+      fontSize: 20,
+      textLanguage: 'en', // en, ur
+      isDrawing: false,
+      drawPoints: [],
+      currentObject: null, // Temporary container for shape drawing preview
+      annotations: {}, // Keyed by page index, contains { drawings: [], shapes: [], texts: [] }
+      history: {}, // History per page for undo/redo
+      activeTextId: null,
+      fileHandle: null
+    };
+
+    // DOM Elements
+    const dropZone = document.getElementById('drop-zone');
+    const filePicker = document.getElementById('file-picker');
+    const landingScreen = document.getElementById('landing-screen');
+    const appContainer = document.getElementById('app-container');
+    const loadingOverlay = document.getElementById('loading-overlay');
+    const loaderStatusText = document.getElementById('loader-status-text');
+    const fileNameDisplay = document.getElementById('file-name-display');
+    const toastContainer = document.getElementById('toast-container');
+    const toastMessage = document.getElementById('toast-message');
+    const pdfCanvas = document.getElementById('pdf-canvas');
+    const annotationCanvas = document.getElementById('annotation-canvas');
+    const textLayer = document.getElementById('text-layer');
+    const pageWrapper = document.getElementById('page-wrapper');
+    const thumbnailsContainer = document.getElementById('thumbnails-container');
+
+    // Controls
+    const prevPageBtn = document.getElementById('prev-page-btn');
+    const nextPageBtn = document.getElementById('next-page-btn');
+    const pageNumInput = document.getElementById('page-num-input');
+    const totalPagesDisplay = document.getElementById('total-pages-display');
+    const zoomInBtn = document.getElementById('zoom-in-btn');
+    const zoomOutBtn = document.getElementById('zoom-out-btn');
+    const zoomFitBtn = document.getElementById('zoom-fit-btn');
+    const zoomPercentDisplay = document.getElementById('zoom-percent-display');
+    const undoBtn = document.getElementById('undo-btn');
+    const redoBtn = document.getElementById('redo-btn');
+    const clearPageBtn = document.getElementById('clear-page-btn');
+    const downloadPdfBtn = document.getElementById('download-pdf-btn');
+    const newDocumentBtn = document.getElementById('new-document-btn');
+    const themeToggleBtn = document.getElementById('theme-toggle');
+    const toggleSidebarBtn = document.getElementById('toggle-sidebar-btn');
+    const sidebarElement = document.getElementById('sidebar');
+
+    // Inspector Panels
+    const colorGrid = document.getElementById('color-palette');
+    const strokeThicknessSlider = document.getElementById('stroke-thickness-slider');
+    const strokeThicknessDisplay = document.getElementById('stroke-thickness-display');
+    const textStyleOptions = document.getElementById('text-style-options');
+    const fontSizeSlider = document.getElementById('font-size-slider');
+    const fontSizeDisplay = document.getElementById('font-size-display');
+    const btnLangEn = document.getElementById('btn-lang-en');
+    const btnLangUr = document.getElementById('btn-lang-ur');
+    const langIndicator = document.getElementById('lang-indicator');
+
+    // Canvas contexts
+    const pdfCtx = pdfCanvas.getContext('2d');
+    const annotCtx = annotationCanvas.getContext('2d');
+
+    // Global variables for scaling
+    let pageWidth100 = 0;
+    let pageHeight100 = 0;
+
+    // Show Custom Toast Error Notification
+    function showToast(message, duration = 4000) {
+      toastMessage.textContent = message;
+      toastContainer.classList.add('show');
+      setTimeout(() => {
+        toastContainer.classList.remove('show');
+      }, duration);
+    }
+
+    // Toggle Loading Screen
+    function toggleLoader(show, text = 'Loading PDF...') {
+      loaderStatusText.textContent = text;
+      loadingOverlay.style.display = show ? 'flex' : 'none';
+    }
+
+    // --- File Drag/Drop & File Pick Validation ---
+
+    // File validation check
+    function validateAndLoadFile(file) {
+      if (!file) return;
+      if (file.type !== 'application/pdf' && !file.name.endsWith('.pdf')) {
+        showToast('Error: Extension not acceptable! Only PDF (.pdf) files are allowed.');
+        return;
+      }
+      
+      toggleLoader(true, 'Reading file...');
+      fileNameDisplay.textContent = file.name;
+      
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const arrayBuffer = e.target.result;
+        loadPDF(arrayBuffer);
+      };
+      reader.onerror = function() {
+        toggleLoader(false);
+        showToast('Error reading the selected file.');
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    // Click triggers file picker (preferring modern File System Access API)
+    dropZone.addEventListener('click', async () => {
+      if ('showOpenFilePicker' in window) {
+        try {
+          const [handle] = await window.showOpenFilePicker({
+            types: [{
+              description: 'PDF Files',
+              accept: {
+                'application/pdf': ['.pdf']
+              }
+            }],
+            multiple: false
+          });
+          state.fileHandle = handle;
+          const file = await handle.getFile();
+          validateAndLoadFile(file);
+        } catch (err) {
+          console.log('File picker closed or failed:', err);
+        }
+      } else {
+        filePicker.click();
+      }
+    });
+
+    filePicker.addEventListener('change', (e) => {
+      state.fileHandle = null; // Standard input stream doesn't give direct write access
+      validateAndLoadFile(e.target.files[0]);
+    });
+
+    // Drag-and-drop event handlers
+    ['dragenter', 'dragover'].forEach(eventName => {
+      dropZone.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        dropZone.classList.add('dragover');
+      }, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+      dropZone.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+      }, false);
+    });
+
+    dropZone.addEventListener('drop', async (e) => {
+      const dt = e.dataTransfer;
+      
+      // Try to extract FileHandle from dropped items
+      if (dt.items && dt.items.length > 0) {
+        const item = dt.items[0];
+        if (item.kind === 'file' && typeof item.getAsFileSystemHandle === 'function') {
+          try {
+            const handle = await item.getAsFileSystemHandle();
+            if (handle.kind === 'file') {
+              state.fileHandle = handle;
+              const file = await handle.getFile();
+              validateAndLoadFile(file);
+              return;
+            }
+          } catch (err) {
+            console.log('Failed to fetch drop handle:', err);
+          }
+        }
+      }
+
+      // Fallback if handle extraction is not supported or fails
+      const file = dt.files[0];
+      state.fileHandle = null;
+      validateAndLoadFile(file);
+    });
+
+    // --- PDF Processing and Rendering ---
+
+    async function loadPDF(arrayBuffer) {
+      try {
+        state.pdfData = arrayBuffer;
+        toggleLoader(true, 'Initializing PDF Engine...');
+        
+        const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+        state.pdfDoc = await loadingTask.promise;
+        state.totalPages = state.pdfDoc.numPages;
+        totalPagesDisplay.textContent = state.totalPages;
+        pageNumInput.max = state.totalPages;
+        state.currentPage = 1;
+        pageNumInput.value = 1;
+        
+        // Reset annotations arrays for all pages
+        state.annotations = {};
+        state.history = {};
+        for (let i = 1; i <= state.totalPages; i++) {
+          state.annotations[i] = { drawings: [], shapes: [], texts: [] };
+          state.history[i] = { undoStack: [], redoStack: [] };
+        }
+
+        // Generate sidebar page thumbnails
+        await generateThumbnails();
+
+        // Load the first page
+        await renderPage(1);
+
+        // Hide landing screen & Show App Workspace
+        landingScreen.style.opacity = 0;
+        setTimeout(() => {
+          landingScreen.style.display = 'none';
+          appContainer.classList.add('active');
+          toggleLoader(false);
+        }, 500);
+
+      } catch (err) {
+        console.error(err);
+        toggleLoader(false);
+        showToast('Error parsing PDF. The file may be corrupted.');
+      }
+    }
+
+    // Render Side Panel Thumbnails
+    async function generateThumbnails() {
+      thumbnailsContainer.innerHTML = '';
+      
+      for (let i = 1; i <= state.totalPages; i++) {
+        const page = await state.pdfDoc.getPage(i);
+        const viewport = page.getViewport({ scale: 0.25 }); // low resolution thumbnail
+        
+        const card = document.createElement('div');
+        card.className = `thumbnail-card ${i === 1 ? 'active' : ''}`;
+        card.dataset.page = i;
+        
+        const wrapper = document.createElement('div');
+        wrapper.className = 'thumbnail-wrapper';
+        
+        const canvas = document.createElement('canvas');
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        const ctx = canvas.getContext('2d');
+        
+        wrapper.appendChild(canvas);
+        card.appendChild(wrapper);
+        
+        const label = document.createElement('span');
+        label.className = 'thumbnail-number';
+        label.textContent = `Page ${i}`;
+        card.appendChild(label);
+        
+        thumbnailsContainer.appendChild(card);
+        
+        // Render asynchronously
+        await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+        
+        // Click handler to select page
+        card.addEventListener('click', () => {
+          navigateToPage(i);
+        });
+      }
+    }
+
+    // Navigation and Page Changing
+    async function navigateToPage(pageNum) {
+      if (pageNum < 1 || pageNum > state.totalPages || pageNum === state.currentPage) return;
+      
+      // Save any active edits
+      deselectAllTextAnnotations();
+      
+      state.currentPage = pageNum;
+      pageNumInput.value = pageNum;
+      
+      // Update Thumbnail active state
+      document.querySelectorAll('.thumbnail-card').forEach(card => {
+        card.classList.toggle('active', parseInt(card.dataset.page) === pageNum);
+      });
+
+      toggleLoader(true, `Rendering Page ${pageNum}...`);
+      await renderPage(pageNum);
+      toggleLoader(false);
+    }
+
+    // Render Main Workspace Page
+    async function renderPage(pageNum) {
+      try {
+        const page = await state.pdfDoc.getPage(pageNum);
+        
+        // Compute sizes at scale 1.0
+        const baseViewport = page.getViewport({ scale: 1.0 });
+        pageWidth100 = baseViewport.width;
+        pageHeight100 = baseViewport.height;
+
+        // Set dimensions with zoom scale
+        const viewport = page.getViewport({ scale: state.zoom });
+        
+        pdfCanvas.width = viewport.width;
+        pdfCanvas.height = viewport.height;
+        annotationCanvas.width = viewport.width;
+        annotationCanvas.height = viewport.height;
+        
+        pageWrapper.style.width = viewport.width + 'px';
+        pageWrapper.style.height = viewport.height + 'px';
+
+        // Render PDF page to background canvas
+        await page.render({ canvasContext: pdfCtx, viewport: viewport }).promise;
+        
+        // Draw saved drawings and shapes
+        redrawAnnotations();
+        
+        // Render saved text overlay elements
+        renderTextAnnotations();
+
+      } catch (err) {
+        console.error(err);
+        showToast('Error occurred while rendering the page.');
+      }
+    }
+
+    // --- Annotation Redrawing (Scale Independent) ---
+
+    function getRGBfromHex(hex) {
+      const r = parseInt(hex.slice(1, 3), 16);
+      const g = parseInt(hex.slice(3, 5), 16);
+      const b = parseInt(hex.slice(5, 7), 16);
+      return { r, g, b };
+    }
+
+    function redrawAnnotations() {
+      annotCtx.clearRect(0, 0, annotationCanvas.width, annotationCanvas.height);
+      const pageAnn = state.annotations[state.currentPage];
+      if (!pageAnn) return;
+
+      annotCtx.save();
+      // Apply scale globally so coordinates are processed in 1.0 scale
+      annotCtx.scale(state.zoom, state.zoom);
+
+      // 1. Draw Brush and Highlighter Strokes
+      pageAnn.drawings.forEach(stroke => {
+        if (stroke.points.length < 1) return;
+        
+        annotCtx.beginPath();
+        annotCtx.strokeStyle = stroke.color;
+        annotCtx.lineWidth = stroke.thickness;
+        annotCtx.lineCap = 'round';
+        annotCtx.lineJoin = 'round';
+
+        if (stroke.isHighlight) {
+          annotCtx.save();
+          // Use standard multiply composite so highlighting blends with text underneath
+          annotCtx.globalCompositeOperation = 'multiply';
+          // Convert hex color to semi-transparent RGBA color
+          const rgb = getRGBfromHex(stroke.color);
+          annotCtx.strokeStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.35)`;
+          annotCtx.lineWidth = stroke.thickness * 2.5; // highlighter is normally thicker
+        }
+
+        annotCtx.moveTo(stroke.points[0].x, stroke.points[0].y);
+        for (let i = 1; i < stroke.points.length; i++) {
+          annotCtx.lineTo(stroke.points[i].x, stroke.points[i].y);
+        }
+        annotCtx.stroke();
+        
+        if (stroke.isHighlight) {
+          annotCtx.restore();
+        }
+      });
+
+      // 2. Draw Shapes (Rectangles, Circles, Lines)
+      pageAnn.shapes.forEach(shape => {
+        annotCtx.beginPath();
+        annotCtx.strokeStyle = shape.color;
+        annotCtx.lineWidth = shape.thickness;
+        annotCtx.lineCap = 'round';
+
+        if (shape.type === 'rect') {
+          annotCtx.rect(shape.x, shape.y, shape.w, shape.h);
+          annotCtx.stroke();
+        } else if (shape.type === 'circle') {
+          // compute radius and center
+          const rx = shape.w / 2;
+          const ry = shape.h / 2;
+          const cx = shape.x + rx;
+          const cy = shape.y + ry;
+          annotCtx.save();
+          annotCtx.translate(cx, cy);
+          annotCtx.scale(rx, ry);
+          annotCtx.arc(0, 0, 1, 0, 2 * Math.PI);
+          annotCtx.restore();
+          annotCtx.stroke();
+        } else if (shape.type === 'line') {
+          annotCtx.moveTo(shape.x, shape.y);
+          annotCtx.lineTo(shape.x + shape.w, shape.y + shape.h);
+          annotCtx.stroke();
+        }
+      });
+
+      // Draw temporary drawing shape preview (if actively creating one)
+      if (state.currentObject) {
+        annotCtx.beginPath();
+        annotCtx.strokeStyle = state.currentObject.color;
+        annotCtx.lineWidth = state.currentObject.thickness;
+        annotCtx.lineCap = 'round';
+
+        const shape = state.currentObject;
+        if (shape.type === 'rect') {
+          annotCtx.rect(shape.x, shape.y, shape.w, shape.h);
+          annotCtx.stroke();
+        } else if (shape.type === 'circle') {
+          const rx = shape.w / 2;
+          const ry = shape.h / 2;
+          const cx = shape.x + rx;
+          const cy = shape.y + ry;
+          annotCtx.save();
+          annotCtx.translate(cx, cy);
+          annotCtx.scale(rx, ry);
+          annotCtx.arc(0, 0, 1, 0, 2 * Math.PI);
+          annotCtx.restore();
+          annotCtx.stroke();
+        } else if (shape.type === 'line') {
+          annotCtx.moveTo(shape.x, shape.y);
+          annotCtx.lineTo(shape.x + shape.w, shape.y + shape.h);
+          annotCtx.stroke();
+        }
+      }
+
+      annotCtx.restore();
+    }
+
+    // --- DOM Text Annotations Layer Management ---
+
+    function renderTextAnnotations() {
+      // Clear current elements in container
+      textLayer.innerHTML = '';
+      const pageAnn = state.annotations[state.currentPage];
+      if (!pageAnn) return;
+
+      pageAnn.texts.forEach(textObj => {
+        createTextDOMElement(textObj);
+      });
+    }
+
+    function createTextDOMElement(textObj) {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'text-annotation-wrapper';
+      wrapper.id = textObj.id;
+      wrapper.dataset.urdu = textObj.lang === 'ur';
+
+      const editable = document.createElement('div');
+      editable.className = 'text-annotation-editable';
+      editable.setAttribute('contenteditable', 'true');
+      editable.setAttribute('spellcheck', 'false');
+      editable.style.color = textObj.color;
+      editable.innerText = textObj.text;
+
+      // Create Delete Button
+      const delBtn = document.createElement('button');
+      delBtn.className = 'text-delete-btn';
+      delBtn.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+      delBtn.setAttribute('contenteditable', 'false');
+
+      wrapper.appendChild(editable);
+      wrapper.appendChild(delBtn);
+      textLayer.appendChild(wrapper);
+
+      // Compute size/position based on current zoom
+      updateTextDOMStyle(wrapper, editable, textObj);
+
+      // Event Listeners for dragging, editing, focus and delete
+      
+      // Delete Text Event
+      delBtn.addEventListener('mousedown', (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        deleteTextAnnotation(textObj.id);
+      });
+
+      // Focus / Select Text box
+      editable.addEventListener('focus', () => {
+        deselectAllTextAnnotations(textObj.id);
+        wrapper.classList.add('active-annotation');
+        
+        // Match inspector UI toggles to this text box's state
+        state.textLanguage = textObj.lang;
+        state.fontSize = textObj.fontSize;
+        state.currentColor = textObj.color;
+        
+        updateInspectorUI();
+      });
+
+      // Update actual data model as user types
+      editable.addEventListener('input', () => {
+        textObj.text = editable.innerText;
+      });
+
+      // Prevent shortcuts triggering during typing
+      editable.addEventListener('keydown', (e) => {
+        e.stopPropagation();
+      });
+
+      // Mouse drag setup
+      let isDragging = false;
+      let startX, startY;
+
+      wrapper.addEventListener('mousedown', (e) => {
+        // If clicking the editable div itself when it's already focused, let the user place the text cursor
+        if (document.activeElement === editable && e.target === editable) return;
+        isDragging = true;
+        startX = e.clientX - (textObj.x * state.zoom);
+        startY = e.clientY - (textObj.y * state.zoom);
+        e.stopPropagation();
+      });
+
+      document.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        
+        // Calculate new coordinate at 1.0 scale
+        const newX = (e.clientX - startX) / state.zoom;
+        const newY = (e.clientY - startY) / state.zoom;
+        
+        // Constrain text to remain within canvas boundaries
+        textObj.x = Math.max(0, Math.min(newX, pageWidth100 - 40));
+        textObj.y = Math.max(0, Math.min(newY, pageHeight100 - 20));
+        
+        updateTextDOMStyle(wrapper, editable, textObj);
+      });
+
+      document.addEventListener('mouseup', () => {
+        if (isDragging) {
+          isDragging = false;
+          saveHistoryState();
+        }
+      });
+    }
+
+    function updateTextDOMStyle(wrapper, editable, textObj) {
+      wrapper.style.left = (textObj.x * state.zoom) + 'px';
+      wrapper.style.top = (textObj.y * state.zoom) + 'px';
+      editable.style.fontSize = (textObj.fontSize * state.zoom) + 'px';
+    }
+
+    function deselectAllTextAnnotations(excludeId = null) {
+      state.activeTextId = excludeId;
+      document.querySelectorAll('.text-annotation-wrapper').forEach(el => {
+        if (el.id === excludeId) return;
+        el.classList.remove('active-annotation');
+        const editable = el.querySelector('.text-annotation-editable');
+        if (editable) editable.blur();
+      });
+    }
+
+    function deleteTextAnnotation(id) {
+      const pageAnn = state.annotations[state.currentPage];
+      if (!pageAnn) return;
+
+      const idx = pageAnn.texts.findIndex(t => t.id === id);
+      if (idx !== -1) {
+        pageAnn.texts.splice(idx, 1);
+        const el = document.getElementById(id);
+        if (el) el.remove();
+        saveHistoryState();
+      }
+    }
+
+    // --- Mouse Canvas Events for drawing and shapes ---
+
+    function getMousePositionOnCanvas(e) {
+      const rect = annotationCanvas.getBoundingClientRect();
+      // Mouse coordinates relative to canvas bounding box, scaled to matches context scale (1.0 viewport coordinate)
+      const x = (e.clientX - rect.left) / (rect.width / annotationCanvas.width) / state.zoom;
+      const y = (e.clientY - rect.top) / (rect.height / annotationCanvas.height) / state.zoom;
+      return { x, y };
+    }
+
+    annotationCanvas.addEventListener('mousedown', (e) => {
+      // If we are in "pan" selection mode, we ignore canvas drawing triggers
+      if (state.currentTool === 'pan') return;
+
+      const coords = getMousePositionOnCanvas(e);
+
+      if (state.currentTool === 'text') {
+        deselectAllTextAnnotations();
+        // Create new text annotation
+        const newText = {
+          id: 'text_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+          text: 'Type text here...',
+          x: coords.x,
+          y: coords.y - 10,
+          fontSize: state.fontSize,
+          color: state.currentColor,
+          lang: state.textLanguage
+        };
+        state.annotations[state.currentPage].texts.push(newText);
+        createTextDOMElement(newText);
+        
+        // Immediately focus it
+        const wrapper = document.getElementById(newText.id);
+        if (wrapper) {
+          const editable = wrapper.querySelector('.text-annotation-editable');
+          if (editable) {
+            editable.focus();
+            // Select text range
+            const range = document.createRange();
+            range.selectNodeContents(editable);
+            const sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(range);
+          }
+        }
+        
+        saveHistoryState();
+        return;
+      }
+
+      // Drawing shapes / freehand pen
+      state.isDrawing = true;
+      
+      if (state.currentTool === 'draw' || state.currentTool === 'highlight') {
+        state.drawPoints = [coords];
+      } else {
+        // Shapes setup (rectangle, circle, line)
+        state.currentObject = {
+          type: state.currentTool,
+          x: coords.x,
+          y: coords.y,
+          w: 0,
+          h: 0,
+          color: state.currentColor,
+          thickness: state.strokeThickness
+        };
+      }
+    });
+
+    document.addEventListener('mousemove', (e) => {
+      if (!state.isDrawing) return;
+
+      const coords = getMousePositionOnCanvas(e);
+
+      if (state.currentTool === 'draw' || state.currentTool === 'highlight') {
+        state.drawPoints.push(coords);
+        redrawAnnotations();
+        
+        // Draw the temporary line dynamically for smooth experience
+        annotCtx.save();
+        annotCtx.scale(state.zoom, state.zoom);
+        annotCtx.beginPath();
+        annotCtx.strokeStyle = state.currentColor;
+        annotCtx.lineWidth = state.strokeThickness;
+        annotCtx.lineCap = 'round';
+        annotCtx.lineJoin = 'round';
+
+        if (state.currentTool === 'highlight') {
+          annotCtx.globalCompositeOperation = 'multiply';
+          const rgb = getRGBfromHex(state.currentColor);
+          annotCtx.strokeStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.35)`;
+          annotCtx.lineWidth = state.strokeThickness * 2.5;
+        }
+
+        annotCtx.moveTo(state.drawPoints[0].x, state.drawPoints[0].y);
+        for (let i = 1; i < state.drawPoints.length; i++) {
+          annotCtx.lineTo(state.drawPoints[i].x, state.drawPoints[i].y);
+        }
+        annotCtx.stroke();
+        annotCtx.restore();
+      } else if (state.currentObject) {
+        // Compute width & height relative to start point
+        state.currentObject.w = coords.x - state.currentObject.x;
+        state.currentObject.h = coords.y - state.currentObject.y;
+        redrawAnnotations();
+      }
+    });
+
+    document.addEventListener('mouseup', () => {
+      if (!state.isDrawing) return;
+      state.isDrawing = false;
+
+      const pageAnn = state.annotations[state.currentPage];
+
+      if (state.currentTool === 'draw' || state.currentTool === 'highlight') {
+        if (state.drawPoints.length > 1) {
+          pageAnn.drawings.push({
+            points: state.drawPoints,
+            color: state.currentColor,
+            thickness: state.strokeThickness,
+            isHighlight: state.currentTool === 'highlight'
+          });
+          saveHistoryState();
+        }
+        state.drawPoints = [];
+      } else if (state.currentObject) {
+        // Shapes finalization
+        pageAnn.shapes.push(state.currentObject);
+        state.currentObject = null;
+        saveHistoryState();
+      }
+      
+      redrawAnnotations();
+    });
+
+    // --- Toolbar Interaction Logic ---
+
+    document.querySelectorAll('.tool-btn[data-tool]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        deselectAllTextAnnotations();
+        document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        state.currentTool = btn.dataset.tool;
+
+        // Toggle panel display specifically for Text options
+        if (state.currentTool === 'text') {
+          textStyleOptions.style.display = 'flex';
+        } else {
+          textStyleOptions.style.display = 'none';
+        }
+
+        // Adjust Canvas cursor style depending on tool chosen
+        if (state.currentTool === 'pan') {
+          annotationCanvas.style.cursor = 'grab';
+        } else if (state.currentTool === 'text') {
+          annotationCanvas.style.cursor = 'text';
+        } else {
+          annotationCanvas.style.cursor = 'crosshair';
+        }
+      });
+    });
+
+    // Theme switching logic
+    themeToggleBtn.addEventListener('click', () => {
+      const isLight = document.body.classList.toggle('light-theme');
+      themeToggleBtn.innerHTML = isLight ? '<i class="fa-solid fa-sun"></i>' : '<i class="fa-solid fa-moon"></i>';
+    });
+
+    // Sidebar panel collapse
+    toggleSidebarBtn.addEventListener('click', () => {
+      sidebarElement.classList.toggle('collapsed');
+    });
+
+    // --- Inspector Settings and Options ---
+
+    // Color Bubble selection
+    colorGrid.addEventListener('click', (e) => {
+      const bubble = e.target.closest('.color-bubble');
+      if (!bubble) return;
+
+      document.querySelectorAll('.color-bubble').forEach(b => b.classList.remove('active'));
+      bubble.classList.add('active');
+      
+      state.currentColor = bubble.dataset.color;
+
+      // Update active text selection if present
+      if (state.activeTextId) {
+        const textObj = state.annotations[state.currentPage].texts.find(t => t.id === state.activeTextId);
+        if (textObj) {
+          textObj.color = state.currentColor;
+          const wrapper = document.getElementById(state.activeTextId);
+          if (wrapper) {
+            const editable = wrapper.querySelector('.text-annotation-editable');
+            if (editable) editable.style.color = state.currentColor;
+          }
+          saveHistoryState();
+        }
+      }
+    });
+
+    // Stroke Thickness slider
+    strokeThicknessSlider.addEventListener('input', (e) => {
+      state.strokeThickness = parseInt(e.target.value);
+      strokeThicknessDisplay.textContent = state.strokeThickness + 'px';
+    });
+
+    // Font Size slider
+    fontSizeSlider.addEventListener('input', (e) => {
+      state.fontSize = parseInt(e.target.value);
+      fontSizeDisplay.textContent = state.fontSize + 'px';
+
+      // Update active text selection if present
+      if (state.activeTextId) {
+        const textObj = state.annotations[state.currentPage].texts.find(t => t.id === state.activeTextId);
+        if (textObj) {
+          textObj.fontSize = state.fontSize;
+          const wrapper = document.getElementById(state.activeTextId);
+          if (wrapper) {
+            const editable = wrapper.querySelector('.text-annotation-editable');
+            if (editable) updateTextDOMStyle(wrapper, editable, textObj);
+          }
+          saveHistoryState();
+        }
+      }
+    });
+
+    // Language Toggles (English / Urdu)
+    function setLanguage(lang) {
+      state.textLanguage = lang;
+      btnLangEn.classList.toggle('active', lang === 'en');
+      btnLangUr.classList.toggle('active', lang === 'ur');
+      
+      langIndicator.textContent = lang === 'en' ? 'English' : 'Urdu';
+      langIndicator.className = `active-lang-badge ${lang}`;
+
+      // Update active text selection if present
+      if (state.activeTextId) {
+        const textObj = state.annotations[state.currentPage].texts.find(t => t.id === state.activeTextId);
+        if (textObj) {
+          textObj.lang = lang;
+          const wrapper = document.getElementById(state.activeTextId);
+          if (wrapper) wrapper.dataset.urdu = lang === 'ur';
+          saveHistoryState();
+        }
+      }
+    }
+
+    btnLangEn.addEventListener('click', () => setLanguage('en'));
+    btnLangUr.addEventListener('click', () => setLanguage('ur'));
+
+    function updateInspectorUI() {
+      // Thickness UI
+      strokeThicknessSlider.value = state.strokeThickness;
+      strokeThicknessDisplay.textContent = state.strokeThickness + 'px';
+      
+      // Font Size UI
+      fontSizeSlider.value = state.fontSize;
+      fontSizeDisplay.textContent = state.fontSize + 'px';
+
+      // Language UI
+      setLanguage(state.textLanguage);
+
+      // Color Palette bubble active state
+      document.querySelectorAll('.color-bubble').forEach(b => {
+        b.classList.toggle('active', b.dataset.color === state.currentColor);
+      });
+    }
+
+    // --- Navigation Controls ---
+
+    prevPageBtn.addEventListener('click', () => navigateToPage(state.currentPage - 1));
+    nextPageBtn.addEventListener('click', () => navigateToPage(state.currentPage + 1));
+    
+    pageNumInput.addEventListener('change', (e) => {
+      let requested = parseInt(e.target.value);
+      if (isNaN(requested)) {
+        e.target.value = state.currentPage;
+        return;
+      }
+      requested = Math.max(1, Math.min(requested, state.totalPages));
+      e.target.value = requested;
+      navigateToPage(requested);
+    });
+
+    // Prevent typing values outside valid range as user types
+    pageNumInput.addEventListener('input', (e) => {
+      let val = parseInt(e.target.value);
+      if (isNaN(val)) return;
+      if (val > state.totalPages) e.target.value = state.totalPages;
+      if (val < 1 && e.target.value.length > 0) e.target.value = 1;
+    });
+
+    // Also prevent non-numeric keys and enforce min/max on keydown
+    pageNumInput.addEventListener('keydown', (e) => {
+      e.stopPropagation(); // Prevent arrow keys from triggering page navigation while typing
+    });
+
+    // --- Zoom Controls ---
+
+    async function applyZoom(newZoom) {
+      if (newZoom < 0.25 || newZoom > 4.0) return;
+      state.zoom = newZoom;
+      zoomPercentDisplay.textContent = Math.round(newZoom * 100) + '%';
+      
+      toggleLoader(true, 'Zooming Page...');
+      await renderPage(state.currentPage);
+      toggleLoader(false);
+    }
+
+    zoomInBtn.addEventListener('click', () => applyZoom(state.zoom + 0.15));
+    zoomOutBtn.addEventListener('click', () => applyZoom(state.zoom - 0.15));
+    
+    zoomFitBtn.addEventListener('click', () => {
+      // Fit to container width
+      const containerWidth = document.getElementById('viewer-container').clientWidth;
+      // padding padding margin
+      const targetZoom = (containerWidth - 90) / pageWidth100;
+      applyZoom(Math.max(0.3, Math.min(targetZoom, 2.5)));
+    });
+
+    // --- Undo, Redo, and Clear Action Management ---
+
+    function saveHistoryState() {
+      const pageNum = state.currentPage;
+      const historyStack = state.history[pageNum];
+      
+      // Deep clone current annotations on this page
+      const snapshot = JSON.stringify(state.annotations[pageNum]);
+      
+      // Push state, capping history size at 25
+      historyStack.undoStack.push(snapshot);
+      if (historyStack.undoStack.length > 25) {
+        historyStack.undoStack.shift();
+      }
+      // Reset redo stack
+      historyStack.redoStack = [];
+    }
+
+    function undo() {
+      const pageNum = state.currentPage;
+      const historyStack = state.history[pageNum];
+      
+      if (historyStack.undoStack.length <= 1) return; // First state is empty / baseline
+      
+      const currentSnapshot = historyStack.undoStack.pop();
+      historyStack.redoStack.push(currentSnapshot);
+      
+      const previousSnapshot = historyStack.undoStack[historyStack.undoStack.length - 1];
+      state.annotations[pageNum] = JSON.parse(previousSnapshot);
+      
+      redrawAnnotations();
+      renderTextAnnotations();
+    }
+
+    function redo() {
+      const pageNum = state.currentPage;
+      const historyStack = state.history[pageNum];
+      
+      if (historyStack.redoStack.length === 0) return;
+      
+      const targetSnapshot = historyStack.redoStack.pop();
+      historyStack.undoStack.push(targetSnapshot);
+      
+      state.annotations[pageNum] = JSON.parse(targetSnapshot);
+      
+      redrawAnnotations();
+      renderTextAnnotations();
+    }
+
+    // Keyboard Shortcuts
+    document.addEventListener('keydown', (e) => {
+      // Skip navigation shortcuts if user is typing in an editable element
+      const isTyping = document.activeElement && (
+        document.activeElement.isContentEditable ||
+        document.activeElement.tagName === 'INPUT' ||
+        document.activeElement.tagName === 'TEXTAREA'
+      );
+
+      if (e.ctrlKey && e.key === 'z') {
+        e.preventDefault();
+        undo();
+      }
+      if (e.ctrlKey && e.key === 'y') {
+        e.preventDefault();
+        redo();
+      }
+      if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        saveDocument(true); // Save As
+      } else if (e.ctrlKey && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        saveDocument(false); // Save directly to file
+      }
+
+      // Left/Right Arrow keys for page navigation (only when not typing)
+      if (!isTyping && !e.ctrlKey && !e.altKey && !e.shiftKey) {
+        if (e.key === 'ArrowLeft') {
+          e.preventDefault();
+          navigateToPage(state.currentPage - 1);
+        }
+        if (e.key === 'ArrowRight') {
+          e.preventDefault();
+          navigateToPage(state.currentPage + 1);
+        }
+      }
+    });
+
+    // --- Mouse Wheel Zoom & Viewport Panning ---
+
+    // Zoom via Ctrl + Scroll Wheel
+    const viewerContainer = document.getElementById('viewer-container');
+    viewerContainer.addEventListener('wheel', (e) => {
+      if (e.ctrlKey) {
+        e.preventDefault();
+        const direction = e.deltaY < 0 ? 1 : -1;
+        applyZoom(state.zoom + direction * 0.12);
+      }
+    }, { passive: false });
+
+    // Drag-to-pan scrolling when using the Pan Tool
+    let isPanning = false;
+    let panStartX, panStartY;
+    let scrollStartX, scrollStartY;
+
+    viewerContainer.addEventListener('mousedown', (e) => {
+      if (state.currentTool !== 'pan') return;
+      if (e.target.closest('.text-annotation-wrapper')) return;
+
+      isPanning = true;
+      viewerContainer.style.cursor = 'grabbing';
+      panStartX = e.clientX;
+      panStartY = e.clientY;
+      scrollStartX = viewerContainer.scrollLeft;
+      scrollStartY = viewerContainer.scrollTop;
+    });
+
+    document.addEventListener('mousemove', (e) => {
+      if (!isPanning) return;
+      const dx = e.clientX - panStartX;
+      const dy = e.clientY - panStartY;
+      viewerContainer.scrollLeft = scrollStartX - dx;
+      viewerContainer.scrollTop = scrollStartY - dy;
+    });
+
+    document.addEventListener('mouseup', () => {
+      if (isPanning) {
+        isPanning = false;
+        viewerContainer.style.cursor = 'auto';
+        if (state.currentTool === 'pan') {
+          annotationCanvas.style.cursor = 'grab';
+        }
+      }
+    });
+
+    undoBtn.addEventListener('click', undo);
+    redoBtn.addEventListener('click', redo);
+
+    clearPageBtn.addEventListener('click', () => {
+      if (confirm('Are you sure you want to clear all annotations on page ' + state.currentPage + '?')) {
+        deselectAllTextAnnotations();
+        state.annotations[state.currentPage] = { drawings: [], shapes: [], texts: [] };
+        saveHistoryState();
+        redrawAnnotations();
+        renderTextAnnotations();
+      }
+    });
+
+    // Reset baseline state when PDF first renders
+    function saveInitialHistoryBaseline() {
+      // First state baseline
+      for(let i = 1; i <= state.totalPages; i++) {
+        if (state.history[i].undoStack.length === 0) {
+          state.history[i].undoStack.push(JSON.stringify({ drawings: [], shapes: [], texts: [] }));
+        }
+      }
+    }
+    
+    // Wire history state baseline logic after load
+    const originalLoadPDF = loadPDF;
+    loadPDF = async function(arrayBuffer) {
+      await originalLoadPDF(arrayBuffer);
+      saveInitialHistoryBaseline();
+    };
+
+    // Return to Landing Screen
+    newDocumentBtn.addEventListener('click', () => {
+      if (confirm('Discard changes and open another PDF?')) {
+        deselectAllTextAnnotations();
+        state.fileHandle = null; // Clear active file handle
+        appContainer.classList.remove('active');
+        setTimeout(() => {
+          landingScreen.style.display = 'flex';
+          landingScreen.style.opacity = 1;
+          filePicker.value = '';
+        }, 300);
+      }
+    });
+
+    // --- Save and Compile PDF containing annotations ---
+
+    // Direct helper to compile PDF annotations into Blob
+    async function compilePDFBlob() {
+      const { jsPDF } = window.jspdf;
+      const exportDoc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'pt',
+        format: [pageWidth100, pageHeight100] // matches scale 1.0 viewport sizes of PDF
+      });
+
+      for (let pageNum = 1; pageNum <= state.totalPages; pageNum++) {
+        if (pageNum > 1) {
+          exportDoc.addPage([pageWidth100, pageHeight100]);
+        }
+
+        loaderStatusText.textContent = `Compiling page ${pageNum} of ${state.totalPages}...`;
+
+        const scale = 2.0; 
+        const page = await state.pdfDoc.getPage(pageNum);
+        const viewport = page.getViewport({ scale: scale });
+
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = viewport.width;
+        tempCanvas.height = viewport.height;
+        const tempCtx = tempCanvas.getContext('2d');
+
+        // Render high-res base PDF
+        await page.render({ canvasContext: tempCtx, viewport: viewport }).promise;
+
+        // Render all annotations of this page on top of the temp canvas at high-res scale
+        const pageAnn = state.annotations[pageNum];
+        if (pageAnn) {
+          tempCtx.save();
+          tempCtx.scale(scale, scale);
+
+          // Drawings (Pen & Highlighter)
+          pageAnn.drawings.forEach(stroke => {
+            if (stroke.points.length < 1) return;
+            tempCtx.beginPath();
+            tempCtx.strokeStyle = stroke.color;
+            tempCtx.lineWidth = stroke.thickness;
+            tempCtx.lineCap = 'round';
+            tempCtx.lineJoin = 'round';
+
+            if (stroke.isHighlight) {
+              tempCtx.save();
+              tempCtx.globalCompositeOperation = 'multiply';
+              const rgb = getRGBfromHex(stroke.color);
+              tempCtx.strokeStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.35)`;
+              tempCtx.lineWidth = stroke.thickness * 2.5;
+            }
+
+            tempCtx.moveTo(stroke.points[0].x, stroke.points[0].y);
+            for (let i = 1; i < stroke.points.length; i++) {
+              tempCtx.lineTo(stroke.points[i].x, stroke.points[i].y);
+            }
+            tempCtx.stroke();
+            if (stroke.isHighlight) {
+              tempCtx.restore();
+            }
+          });
+
+          // Shapes
+          pageAnn.shapes.forEach(shape => {
+            tempCtx.beginPath();
+            tempCtx.strokeStyle = shape.color;
+            tempCtx.lineWidth = shape.thickness;
+            tempCtx.lineCap = 'round';
+
+            if (shape.type === 'rect') {
+              tempCtx.rect(shape.x, shape.y, shape.w, shape.h);
+              tempCtx.stroke();
+            } else if (shape.type === 'circle') {
+              const rx = shape.w / 2;
+              const ry = shape.h / 2;
+              const cx = shape.x + rx;
+              const cy = shape.y + ry;
+              tempCtx.save();
+              tempCtx.translate(cx, cy);
+              tempCtx.scale(rx, ry);
+              tempCtx.arc(0, 0, 1, 0, 2 * Math.PI);
+              tempCtx.restore();
+              tempCtx.stroke();
+            } else if (shape.type === 'line') {
+              tempCtx.moveTo(shape.x, shape.y);
+              tempCtx.lineTo(shape.x + shape.w, shape.y + shape.h);
+              tempCtx.stroke();
+            }
+          });
+
+          // Text elements (drawn natively in canvas context)
+          pageAnn.texts.forEach(textObj => {
+            if (!textObj.text.trim()) return;
+
+            tempCtx.save();
+            tempCtx.fillStyle = textObj.color;
+            
+            const fontName = textObj.lang === 'ur' ? 'Noto Nastaliq Urdu' : 'Inter';
+            tempCtx.font = `${textObj.fontSize}px ${fontName}`;
+            
+            if (textObj.lang === 'ur') {
+              tempCtx.direction = 'rtl';
+              const lines = textObj.text.split('\n');
+              const lineWidths = lines.map(line => tempCtx.measureText(line).width);
+              const blockWidth = Math.max(...lineWidths, 0);
+              const rightEdge = textObj.x + blockWidth;
+              
+              tempCtx.textAlign = 'right';
+              let curY = textObj.y + textObj.fontSize * 1.2;
+              
+              lines.forEach(line => {
+                tempCtx.fillText(line, rightEdge, curY);
+                curY += textObj.fontSize * 2.2;
+              });
+            } else {
+              tempCtx.direction = 'ltr';
+              tempCtx.textAlign = 'left';
+              const lines = textObj.text.split('\n');
+              let curY = textObj.y + textObj.fontSize;
+              
+              lines.forEach(line => {
+                tempCtx.fillText(line, textObj.x, curY);
+                curY += textObj.fontSize * 1.4;
+              });
+            }
+            tempCtx.restore();
+          });
+
+          tempCtx.restore();
+        }
+
+        const imgData = tempCanvas.toDataURL('image/jpeg', 0.95);
+        exportDoc.addImage(imgData, 'JPEG', 0, 0, pageWidth100, pageHeight100, undefined, 'FAST');
+      }
+
+      return exportDoc.output('blob');
+    }
+
+    // Direct local saving & fallback routines
+    async function saveDocument(forceSaveAs = false) {
+      deselectAllTextAnnotations();
+      toggleLoader(true, 'Compiling and saving PDF. Please wait...');
+
+      try {
+        const compiledPdfBlob = await compilePDFBlob();
+
+        // 1. Write back directly to same file handle if available
+        if (!forceSaveAs && state.fileHandle) {
+          try {
+            const opts = { mode: 'readwrite' };
+            if (await state.fileHandle.queryPermission(opts) === 'granted' ||
+                await state.fileHandle.requestPermission(opts) === 'granted') {
+              
+              const writable = await state.fileHandle.createWritable();
+              await writable.write(compiledPdfBlob);
+              await writable.close();
+              
+              showToast('Changes saved directly to the file!');
+              toggleLoader(false);
+              return;
+            }
+          } catch (writeErr) {
+            console.warn('Direct file handle write failed, falling back:', writeErr);
+          }
+        }
+
+        // 2. Fallback to Save File Picker (if supported)
+        if ('showSaveFilePicker' in window) {
+          try {
+            const handle = await window.showSaveFilePicker({
+              suggestedName: (fileNameDisplay.textContent && fileNameDisplay.textContent !== 'document.pdf') ? fileNameDisplay.textContent : 'annotated_document.pdf',
+              types: [{
+                description: 'PDF Files',
+                accept: {
+                  'application/pdf': ['.pdf']
+                }
+              }]
+            });
+            state.fileHandle = handle;
+            fileNameDisplay.textContent = handle.name;
+            
+            const writable = await handle.createWritable();
+            await writable.write(compiledPdfBlob);
+            await writable.close();
+            
+            showToast('File saved successfully!');
+          } catch (pickerErr) {
+            console.log('Save picker cancelled or failed', pickerErr);
+          }
+        } else {
+          // 3. Absolute Fallback: Traditional web download
+          const url = URL.createObjectURL(compiledPdfBlob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'annotated_' + (fileNameDisplay.textContent || 'document.pdf');
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          showToast('PDF downloaded successfully!');
+        }
+      } catch (err) {
+        console.error(err);
+        showToast('Failed to save PDF document.');
+      } finally {
+        toggleLoader(false);
+      }
+    }
+
+    // Connect save button to saver routine
+    downloadPdfBtn.addEventListener('click', () => {
+      saveDocument(false);
+    });
+
+  </script>
+</body>
+</html>
