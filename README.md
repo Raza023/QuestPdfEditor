@@ -1,18 +1,10 @@
 <div align="center">
 
-<img src="banner.png" alt="QuestPdf Banner" width="100%" />
-
-<br />
-
 # ✨ QuestPdf — Modern PDF Annotator
 
 **A sleek, zero-dependency, client-side PDF viewer & annotator built entirely in a single HTML file.**
 
 [![Live Demo](https://img.shields.io/badge/🚀_Live_Demo-Visit_Now-6366f1?style=for-the-badge&logoColor=white)](https://raza023.github.io/QuestPdfEditor/)
-[![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=html5&logoColor=white)](https://developer.mozilla.org/en-US/docs/Web/HTML)
-[![CSS3](https://img.shields.io/badge/CSS3-1572B6?style=for-the-badge&logo=css3&logoColor=white)](https://developer.mozilla.org/en-US/docs/Web/CSS)
-[![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
-[![License: MIT](https://img.shields.io/badge/License-MIT-22c55e?style=for-the-badge)](LICENSE)
 
 <br />
 
@@ -28,6 +20,10 @@
 </a>
 
 </div>
+
+<br />
+
+<img src="banner.png" alt="QuestPdf Banner" width="100%" />
 
 <br />
 
